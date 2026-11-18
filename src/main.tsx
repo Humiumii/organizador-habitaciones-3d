@@ -1,3 +1,4 @@
+import { templates } from './templates'
 import { readWorkspaces, saveWorkspaces } from './storage'
 import type { Slot } from './storage'
 import { inspectLayout } from './geometry'
@@ -24,6 +25,8 @@ function FurnitureIcon({ kind }: { kind: Kind }) {
 
 function App() {
   const [workspaces, setWorkspaces] = useState(readWorkspaces)
+  const [confirmTemplate, setConfirmTemplate] = useState(false)
+  const [templateIndex, setTemplateIndex] = useState(0)
   const [saved, setSaved] = useState(true)
   const layout = workspaces.layouts[workspaces.active]
 
@@ -41,6 +44,7 @@ function App() {
 
   function switchLayout(slot: Slot) {
     if (slot === workspaces.active) return
+    setConfirmTemplate(false)
     setWorkspaces(current => ({ ...current, active: slot }))
     select(null)
   }
@@ -60,6 +64,13 @@ function App() {
     setLayout(current => ({
       ...current, items: current.items.map(item => item.id === id ? { ...item, ...patch } : item),
     }))
+  }
+
+  function applyTemplate() {
+    const template = templates[templateIndex]
+    setConfirmTemplate(false)
+    setLayout(template.create)
+    select(null)
   }
 
   function move(id: string, x: number, y: number) {
@@ -101,6 +112,19 @@ function App() {
                 <span className="add" aria-hidden="true">+</span>
               </button>
             })}</div>
+          </section>
+          <section className="template-settings">
+            <h2>Plantillas</h2>
+            <label className="measure">Tipo de habitación
+              <select value={templateIndex} onChange={event => { setTemplateIndex(Number(event.target.value)); setConfirmTemplate(false) }}>
+                {templates.map((template, index) => <option key={template.name} value={index}>{template.name}</option>)}
+              </select>
+            </label>
+            {confirmTemplate ? <>
+              <p className="muted" role="status">Se reemplazará la distribución {workspaces.active === 0 ? 'A' : 'B'}.</p>
+              <button className="template-load" onClick={applyTemplate}>Confirmar reemplazo</button>
+              <button className="template-load" onClick={() => setConfirmTemplate(false)}>Cancelar</button>
+            </> : <button className="template-load" onClick={() => setConfirmTemplate(true)}>Cargar plantilla</button>}
           </section>
           <section className="room-settings"><h2>Medidas de la pieza</h2>
             {([['width', 'Ancho de la pieza'], ['depth', 'Largo de la pieza'], ['height', 'Alto de la pieza']] as const).map(([key, label]) =>

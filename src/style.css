@@ -103,3 +103,16 @@ h3 { font-size: 13px; }
 @media (max-width: 760px) {
   .drawing { height: clamp(290px, 46vh, 470px); }
 }
+
+.template-settings select, .template-load {
+  display: block;
+  width: 100%;
+  margin-top: 5px;
+  padding: 7px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: #f7f8f3;
+  color: inherit;
+  font: inherit;
+}
+.template-load { margin-top: 8px; font-size: 12px; font-weight: 700; }
