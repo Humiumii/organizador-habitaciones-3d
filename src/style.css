@@ -96,3 +96,10 @@ h3 { font-size: 13px; }
 .clearance p + p { margin-top: 4px; }
 .clearance strong { float: right; }
 .warning-text { color: #9c3730; font-weight: 700; }
+
+.layout-tools { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
+.layout-tools .warning-text { font-size: 12px; }
+.drawing { height: clamp(370px, 55vh, 670px); }
+@media (max-width: 760px) {
+  .drawing { height: clamp(290px, 46vh, 470px); }
+}

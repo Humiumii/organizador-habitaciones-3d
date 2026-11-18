@@ -1,8 +1,10 @@
+import { readWorkspaces, saveWorkspaces } from './storage'
+import type { Slot } from './storage'
 import { inspectLayout } from './geometry'
-import { lazy, Suspense, useState } from 'react'
+import { lazy, Suspense, useEffect, useState } from 'react'
 import { createRoot } from 'react-dom/client'
-import { catalog, example, makeItem } from './model'
-import type { Furniture, Kind } from './model'
+import { catalog, makeItem } from './model'
+import type { Furniture, Kind, Layout } from './model'
 import { Measure } from './Measure'
 import { Plan } from './Plan'
 import './style.css'
@@ -21,7 +23,27 @@ function FurnitureIcon({ kind }: { kind: Kind }) {
 }
 
 function App() {
-  const [layout, setLayout] = useState(example)
+  const [workspaces, setWorkspaces] = useState(readWorkspaces)
+  const [saved, setSaved] = useState(true)
+  const layout = workspaces.layouts[workspaces.active]
+
+  useEffect(() => {
+    setSaved(saveWorkspaces(workspaces))
+  }, [workspaces])
+
+  function setLayout(change: (layout: Layout) => Layout) {
+    setWorkspaces(current => {
+      const layouts: [Layout, Layout] = [...current.layouts]
+      layouts[current.active] = change(layouts[current.active])
+      return { ...current, layouts }
+    })
+  }
+
+  function switchLayout(slot: Slot) {
+    if (slot === workspaces.active) return
+    setWorkspaces(current => ({ ...current, active: slot }))
+    select(null)
+  }
   const [selected, select] = useState<string | null>('cama')
   const [view, setView] = useState<'plan' | '3d'>('plan')
   const { room, items } = layout
@@ -57,6 +79,13 @@ function App() {
     <header className="masthead"><span className="brand-mark" aria-hidden="true">◩</span><div><strong>Pieza</strong><span>Organizador de habitaciones</span></div></header>
     <main>
       <div className="intro"><h1>Organiza tu pieza</h1><p>Prueba cómo hacer espacio para un escritorio de 120 cm.</p></div>
+      <div className="layout-tools">
+        <div className="segmented" role="group" aria-label="Distribuciones">
+          <button aria-pressed={workspaces.active === 0} onClick={() => switchLayout(0)}>Distribución A</button>
+          <button aria-pressed={workspaces.active === 1} onClick={() => switchLayout(1)}>Distribución B</button>
+        </div>
+        <span className={saved ? 'muted' : 'warning-text'} role="status">{saved ? 'Guardado en este navegador' : 'No se pudo guardar en este navegador'}</span>
+      </div>
       <div className="editor">
         <aside className="sidebar library" aria-label="Catálogo y habitación">
           <section><h2>Catálogo</h2>
@@ -80,7 +109,7 @@ function App() {
             <button aria-pressed={view === '3d'} onClick={() => setView('3d')}>Vista 3D</button>
           </div></div>
           <div className="drawing">
-            {view === 'plan' ? <Plan issues={issues} layout={layout} selected={selected} select={select} move={(id, x, y) => edit(id, { x, y })} /> :
+            {view === 'plan' ? <Plan issues={issues} layout={layout} selected={selected} select={select} move={(id, x, y) => edit(id, { x: Math.max(-3000, Math.min(3000, x)), y: Math.max(-3000, Math.min(3000, y)) })} /> :
               <Suspense fallback={<p>Cargando vista 3D…</p>}><Scene issues={issues} layout={layout} selected={selected} select={select} /></Suspense>}
           </div>
           <div className="work-footer"><span>{view === 'plan' ? 'Arrastra un mueble o muévelo con las flechas.' : 'Arrastra para girar la cámara. Usa la rueda o pellizca para acercarte.'}</span><span role="status" className={issues.size ? 'warning-text' : undefined}>{issues.size ? `${issues.size} con avisos · ` : ''}{items.length} {items.length === 1 ? 'mueble' : 'muebles'}</span></div>
@@ -106,7 +135,7 @@ function App() {
                 {!!activeStatus?.collisions.length && <p className="warning-text">Se superpone con {activeStatus.collisions.map(item => catalog[item.kind].name.toLowerCase()).join(', ')}.</p>}
               </div>
               <div className="item-actions">
-                <button className="rotate" onClick={() => edit(active.id, { rotation: ((active.rotation + 90) % 360) as Furniture['rotation'] })}>↻ Girar 90°</button>
+                <button className="rotate" onClick={() => edit(active.id, { rotation: ((active.rotation + 90) % 360) as Furniture['rotation'] })}><span aria-hidden="true">↻</span> Girar 90°</button>
                 <button className="remove" onClick={() => remove(active.id)}>Eliminar</button>
               </div>
             </div> : <p className="muted empty">Selecciona un mueble en la planta o en la vista 3D.</p>}
