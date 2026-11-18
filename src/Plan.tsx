@@ -1,10 +1,12 @@
+import { useRef } from 'react'
+import type { PointerEvent } from 'react'
 import { catalog } from './model'
 import type { Furniture, Layout } from './model'
 import { footprint } from './geometry'
 
-type Props = { layout: Layout; selected: string | null; select: (id: string | null) => void }
+type Props = { layout: Layout; selected: string | null; select: (id: string | null) => void; move: (id: string, x: number, y: number) => void }
 
-export function Plan({ layout, selected, select }: Props) {
+export function Plan({ layout, selected, select, move }: Props) {
   const { room, items } = layout
   const w = room.width
   const d = room.depth
@@ -19,18 +21,50 @@ export function Plan({ layout, selected, select }: Props) {
       <text className="dimension-label" x={w / 2} y="-29">{w} cm</text>
       <text className="dimension-label" transform={`translate(-30 ${d / 2}) rotate(-90)`}>{d} cm</text>
       <rect className="floor" width={w} height={d} onClick={() => select(null)} />
-      {items.map(item => <PlanItem key={item.id} item={item} selected={selected === item.id} select={select} />)}
+      {items.map(item => <PlanItem key={item.id} item={item} selected={selected === item.id} select={select} move={move} />)}
     </svg>
   )
 }
 
-function PlanItem({ item, selected, select }: { item: Furniture; selected: boolean; select: Props['select'] }) {
+function PlanItem({ item, selected, select, move }: { item: Furniture; selected: boolean; select: Props['select']; move: Props['move'] }) {
   const { x, y, width, depth } = footprint(item)
   const { name, color } = catalog[item.kind]
+  const drag = useRef<{ pointer: number; offsetX: number; offsetY: number } | null>(null)
+  function point(event: PointerEvent<SVGGElement>) {
+    const matrix = event.currentTarget.ownerSVGElement?.getScreenCTM()
+    return matrix && new DOMPoint(event.clientX, event.clientY).matrixTransform(matrix.inverse())
+  }
+
+  function start(event: PointerEvent<SVGGElement>) {
+    if (event.button !== 0 || drag.current) return
+    const position = point(event)
+    if (!position) return
+    drag.current = { pointer: event.pointerId, offsetX: position.x - x, offsetY: position.y - y }
+    event.currentTarget.setPointerCapture(event.pointerId)
+    select(item.id)
+  }
+
+  function dragTo(event: PointerEvent<SVGGElement>) {
+    if (drag.current?.pointer !== event.pointerId) return
+    const position = point(event)
+    if (!position) return
+    move(item.id, Math.round(position.x - drag.current.offsetX), Math.round(position.y - drag.current.offsetY))
+  }
+
   return (
     <g className="plan-item" data-selected={selected} role="button" tabIndex={0}
       aria-label={name} aria-pressed={selected} onClick={() => select(item.id)}
-      onKeyDown={event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); select(item.id) } }}>
+      onPointerDown={start} onPointerMove={dragTo} onLostPointerCapture={event => {
+        if (drag.current?.pointer === event.pointerId) drag.current = null
+      }}
+      onKeyDown={event => {
+        const direction: Record<string, [number, number]> = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] }
+        const step = direction[event.key]
+        if (!step && event.key !== 'Enter' && event.key !== ' ') return
+        event.preventDefault()
+        select(item.id)
+        if (step) move(item.id, x + step[0], y + step[1])
+      }}>
       <rect x={x} y={y} width={width} height={depth} rx="3" fill={color} />
       <g transform={`translate(${x + width / 2} ${y + depth / 2}) rotate(${item.rotation})`} className="furniture-detail">
         {item.kind === 'bed' && <>
