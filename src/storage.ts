@@ -19,7 +19,7 @@ function validSize(value: unknown): value is Size {
 
 function validFurniture(value: unknown): value is Furniture {
   return record(value) && typeof value.id === 'string' && typeof value.kind === 'string' &&
-    Object.hasOwn(catalog, value.kind) && integer(value.x, -3000) && integer(value.y, -3000) &&
+    Object.hasOwn(catalog, value.kind) && (value.kind !== 'custom' || typeof value.assetName === 'string') && integer(value.x, -3000) && integer(value.y, -3000) &&
     (value.rotation === 0 || value.rotation === 90 || value.rotation === 180 || value.rotation === 270) &&
     validSize(value)
 }

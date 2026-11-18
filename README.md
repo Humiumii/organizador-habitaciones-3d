@@ -22,8 +22,17 @@ El build genera `dist/`. Se puede servir desde un directorio de un sitio estáti
 
 1. Agrega un **Escritorio** de 120 × 60 cm. La posición inicial se cruza con la cama.
 2. Gíralo 90° y ubícalo en X = 345, Y = 200 cm. Queda a 15 cm de la pared derecha.
-3. Alterna a **Vista 3D** y gira o acerca la cámara para revisar el espacio.
+3. Alterna a **Vista 3D**. Arrastra el escritorio para moverlo sobre el suelo, o arrastra el fondo para girar la cámara. Usa la rueda para acercarte.
 4. Pasa a **Distribución B** y prueba otra ubicación. Cada distribución conserva sus muebles y medidas mediante guardado automático en el navegador.
+
+## Plantillas y modelos propios
+
+- En **Plantillas**, elige dormitorio amoblado, oficina en casa, dormitorio compacto o habitación vacía. Confirma para reemplazar la distribución activa.
+- En **Importar modelo**, elige un GLB 2.0 autocontenido de hasta 10 MB. Exporta con las texturas incluidas y sin compresión que requiera decodificadores. Los formatos OBJ y FBX requieren conversión a GLB.
+- El tamaño inicial se obtiene de la caja del modelo en metros y se convierte a centímetros. Puedes moverlo, girarlo y ajustar sus medidas como cualquier otro mueble. Las alertas usan su huella rectangular.
+- Los archivos permanecen en IndexedDB y se recuperan al recargar en el mismo navegador.
+
+![Modelo importado en la vista 3D](docs/modelo-3d.png)
 
 ## Geometría
 

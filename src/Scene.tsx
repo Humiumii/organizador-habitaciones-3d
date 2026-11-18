@@ -1,3 +1,4 @@
+import { ImportedMesh } from './ImportedMesh'
 import { Plane, Raycaster, Vector2, Vector3 } from 'three'
 import { Canvas, useThree } from '@react-three/fiber'
 import { useEffect, useRef } from 'react'
@@ -101,7 +102,10 @@ function Model({ item, origin, active, invalid }: { item: Furniture; origin: [nu
   const color = invalid ? '#df7564' : active ? '#5aa68a' : catalog[kind].color
   return <group position={[f.x + f.width / 2 - origin[0], 0, f.y + f.depth / 2 - origin[1]]}
     rotation={[0, -item.rotation * Math.PI / 180, 0]} userData={{ furnitureId: item.id }}>
-    {kind === 'bed' ? <>
+    {kind === 'custom' ? <>
+      {(active || invalid) && <Box size={[w, 1, d]} position={[0, .5, 0]} color={color} />}
+      <ImportedMesh item={item} color={color} />
+    </> : kind === 'bed' ? <>
       <Box size={[w, h * .38, d]} position={[0, h * .19, 0]} color="#726951" />
       <Box size={[w * .98, h * .46, d * .98]} position={[0, h * .61, 0]} color={color} />
       {[-.23, .23].map(x => <Box key={x} size={[w * .39, h * .16, d * .19]} position={[w * x, h * .92, -d * .34]} color="#f2eee2" />)}

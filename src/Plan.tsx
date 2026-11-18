@@ -1,6 +1,6 @@
 import { useRef } from 'react'
 import type { PointerEvent } from 'react'
-import { catalog } from './model'
+import { catalog, furnitureName } from './model'
 import type { Furniture, Layout } from './model'
 import { footprint } from './geometry'
 
@@ -28,7 +28,8 @@ export function Plan({ layout, selected, select, move, issues }: Props) {
 
 function PlanItem({ item, selected, select, move, invalid }: { item: Furniture; invalid: boolean; selected: boolean; select: Props['select']; move: Props['move'] }) {
   const { x, y, width, depth } = footprint(item)
-  const { name, color } = catalog[item.kind]
+  const { color } = catalog[item.kind]
+  const name = furnitureName(item)
   const drag = useRef<{ pointer: number; offsetX: number; offsetY: number } | null>(null)
   function point(event: PointerEvent<SVGGElement>) {
     const matrix = event.currentTarget.ownerSVGElement?.getScreenCTM()
@@ -76,7 +77,7 @@ function PlanItem({ item, selected, select, move, invalid }: { item: Furniture; 
         {item.kind === 'desk' && <rect x={-item.width * .4} y={-item.depth * .35} width={item.width * .8} height={item.depth * .7} rx="2" />}
         {item.kind === 'nightstand' && <circle cy={item.depth * .26} r={Math.min(item.width, item.depth) * .055} />}
       </g>
-      <text className="item-label" x={x + width / 2} y={y + depth / 2} fontSize={Math.min(13, width / 5, depth / 3)}>{name}</text>
+      <text className="item-label" x={x + width / 2} y={y + depth / 2} fontSize={Math.min(13, width / 5, depth / 3)}>{item.kind === 'custom' && name.length > 12 ? name.slice(0, 11) + '…' : name}</text>
     </g>
   )
 }
