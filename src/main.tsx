@@ -62,6 +62,10 @@ function App() {
     }))
   }
 
+  function move(id: string, x: number, y: number) {
+    edit(id, { x: Math.max(-3000, Math.min(3000, Math.round(x))), y: Math.max(-3000, Math.min(3000, Math.round(y))) })
+  }
+
   function add(kind: Kind) {
     const id = crypto.randomUUID()
     setLayout(current => ({
@@ -109,10 +113,10 @@ function App() {
             <button aria-pressed={view === '3d'} onClick={() => setView('3d')}>Vista 3D</button>
           </div></div>
           <div className="drawing">
-            {view === 'plan' ? <Plan issues={issues} layout={layout} selected={selected} select={select} move={(id, x, y) => edit(id, { x: Math.max(-3000, Math.min(3000, x)), y: Math.max(-3000, Math.min(3000, y)) })} /> :
-              <Suspense fallback={<p>Cargando vista 3D…</p>}><Scene issues={issues} layout={layout} selected={selected} select={select} /></Suspense>}
+            {view === 'plan' ? <Plan issues={issues} layout={layout} selected={selected} select={select} move={move} /> :
+              <Suspense fallback={<p>Cargando vista 3D…</p>}><Scene move={move} issues={issues} layout={layout} selected={selected} select={select} /></Suspense>}
           </div>
-          <div className="work-footer"><span>{view === 'plan' ? 'Arrastra un mueble o muévelo con las flechas.' : 'Arrastra para girar la cámara. Usa la rueda o pellizca para acercarte.'}</span><span role="status" className={issues.size ? 'warning-text' : undefined}>{issues.size ? `${issues.size} con avisos · ` : ''}{items.length} {items.length === 1 ? 'mueble' : 'muebles'}</span></div>
+          <div className="work-footer"><span>{view === 'plan' ? 'Arrastra un mueble o muévelo con las flechas.' : 'Arrastra un mueble para moverlo o el fondo para girar. Usa la rueda para acercarte.'}</span><span role="status" className={issues.size ? 'warning-text' : undefined}>{issues.size ? `${issues.size} con avisos · ` : ''}{items.length} {items.length === 1 ? 'mueble' : 'muebles'}</span></div>
         </section>
         <aside className="sidebar inspector" aria-label="Medidas del mueble">
           <section>
