@@ -89,3 +89,10 @@ h3 { font-size: 13px; }
   .editor { grid-template-columns: minmax(0, 1fr); }
   .inspector { grid-row: 2; }
 }
+
+.plan-item[data-invalid=true] > rect { fill: #f3b7a8; stroke: #9e3934; stroke-width: 2.2; }
+.plan-item[data-invalid=true][data-selected=true] > rect { stroke-width: 3.4; }
+.clearance { margin-top: 12px; border-radius: 6px; background: #edf3ea; padding: 8px; font-size: 12px; }
+.clearance p + p { margin-top: 4px; }
+.clearance strong { float: right; }
+.warning-text { color: #9c3730; font-weight: 700; }

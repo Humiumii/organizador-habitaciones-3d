@@ -1,3 +1,4 @@
+import { inspectLayout } from './geometry'
 import { lazy, Suspense, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import { catalog, example, makeItem } from './model'
@@ -25,6 +26,13 @@ function App() {
   const [view, setView] = useState<'plan' | '3d'>('plan')
   const { room, items } = layout
   const active = items.find(item => item.id === selected)
+
+  const status = inspectLayout(layout)
+  const issues = new Set(items.filter(item => {
+    const check = status.get(item.id)!
+    return !check.clearance || check.collisions.length > 0
+  }).map(item => item.id))
+  const activeStatus = active && status.get(active.id)
 
   function edit(id: string, patch: Partial<Furniture>) {
     setLayout(current => ({
@@ -72,10 +80,10 @@ function App() {
             <button aria-pressed={view === '3d'} onClick={() => setView('3d')}>Vista 3D</button>
           </div></div>
           <div className="drawing">
-            {view === 'plan' ? <Plan layout={layout} selected={selected} select={select} move={(id, x, y) => edit(id, { x, y })} /> :
-              <Suspense fallback={<p>Cargando vista 3D…</p>}><Scene layout={layout} selected={selected} select={select} /></Suspense>}
+            {view === 'plan' ? <Plan issues={issues} layout={layout} selected={selected} select={select} move={(id, x, y) => edit(id, { x, y })} /> :
+              <Suspense fallback={<p>Cargando vista 3D…</p>}><Scene issues={issues} layout={layout} selected={selected} select={select} /></Suspense>}
           </div>
-          <div className="work-footer"><span>{view === 'plan' ? 'Arrastra un mueble o muévelo con las flechas.' : 'Arrastra para girar la cámara. Usa la rueda o pellizca para acercarte.'}</span><span>{items.length} {items.length === 1 ? 'mueble' : 'muebles'}</span></div>
+          <div className="work-footer"><span>{view === 'plan' ? 'Arrastra un mueble o muévelo con las flechas.' : 'Arrastra para girar la cámara. Usa la rueda o pellizca para acercarte.'}</span><span role="status" className={issues.size ? 'warning-text' : undefined}>{issues.size ? `${issues.size} con avisos · ` : ''}{items.length} {items.length === 1 ? 'mueble' : 'muebles'}</span></div>
         </section>
         <aside className="sidebar inspector" aria-label="Medidas del mueble">
           <section>
@@ -91,6 +99,11 @@ function App() {
               <div className="measure-grid">
                 <Measure label="Posición X" value={active.x} min={-3000} change={x => edit(active.id, { x })} />
                 <Measure label="Posición Y" value={active.y} min={-3000} change={y => edit(active.id, { y })} />
+              </div>
+              <div className="clearance" aria-live="polite">
+                {activeStatus?.clearance ? <p>Pared {activeStatus.clearance.wall} <strong>{activeStatus.clearance.distance} cm</strong></p> :
+                  <p className="warning-text">Fuera de la habitación</p>}
+                {!!activeStatus?.collisions.length && <p className="warning-text">Se superpone con {activeStatus.collisions.map(item => catalog[item.kind].name.toLowerCase()).join(', ')}.</p>}
               </div>
               <div className="item-actions">
                 <button className="rotate" onClick={() => edit(active.id, { rotation: ((active.rotation + 90) % 360) as Furniture['rotation'] })}>↻ Girar 90°</button>

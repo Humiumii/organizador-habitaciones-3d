@@ -5,7 +5,7 @@ import { catalog } from './model'
 import type { Furniture, Layout } from './model'
 import { footprint } from './geometry'
 
-type Props = { layout: Layout; selected: string | null; select: (id: string | null) => void }
+type Props = { issues: Set<string>; layout: Layout; selected: string | null; select: (id: string | null) => void }
 
 function CameraControls({ span }: { span: number }) {
   const { camera, gl, invalidate } = useThree()
@@ -29,10 +29,10 @@ function Box({ size, position, color }: { size: [number, number, number]; positi
   return <mesh position={position}><boxGeometry args={size} /><meshStandardMaterial color={color} /></mesh>
 }
 
-function Model({ item, origin, active, select }: { item: Furniture; origin: [number, number]; active: boolean; select: () => void }) {
+function Model({ item, origin, active, invalid, select }: { item: Furniture; origin: [number, number]; active: boolean; invalid: boolean; select: () => void }) {
   const { width: w, height: h, depth: d, kind } = item
   const f = footprint(item)
-  const color = active ? '#5aa68a' : catalog[kind].color
+  const color = invalid ? '#df7564' : active ? '#5aa68a' : catalog[kind].color
   return <group position={[f.x + f.width / 2 - origin[0], 0, f.y + f.depth / 2 - origin[1]]}
     rotation={[0, -item.rotation * Math.PI / 180, 0]} onClick={event => { event.stopPropagation(); select() }}>
     {kind === 'bed' ? <>
@@ -53,7 +53,7 @@ function Model({ item, origin, active, select }: { item: Furniture; origin: [num
   </group>
 }
 
-export default function Scene({ layout, selected, select }: Props) {
+export default function Scene({ layout, selected, select, issues }: Props) {
   const { width: w, depth: d, height: h } = layout.room
   const span = Math.max(w, d, h, ...layout.items.map(item => item.height))
   return <Canvas aria-label="Vista tridimensional de la habitación" frameloop="demand" dpr={[1, 1.7]}
@@ -66,6 +66,6 @@ export default function Scene({ layout, selected, select }: Props) {
     <Box size={[w, 7, d]} position={[0, -3.5, 0]} color="#d5c3a8" />
     <Box size={[w + 8, h, 4]} position={[0, h / 2, -d / 2 - 2]} color="#e0ebdf" />
     <Box size={[4, h, d]} position={[-w / 2 - 2, h / 2, 0]} color="#c1d1c6" />
-    {layout.items.map(item => <Model key={item.id} item={item} origin={[w / 2, d / 2]} active={selected === item.id} select={() => select(item.id)} />)}
+    {layout.items.map(item => <Model key={item.id} item={item} origin={[w / 2, d / 2]} active={selected === item.id} invalid={issues.has(item.id)} select={() => select(item.id)} />)}
   </Canvas>
 }
