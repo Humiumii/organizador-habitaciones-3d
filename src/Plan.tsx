@@ -4,9 +4,9 @@ import { catalog } from './model'
 import type { Furniture, Layout } from './model'
 import { footprint } from './geometry'
 
-type Props = { layout: Layout; selected: string | null; select: (id: string | null) => void; move: (id: string, x: number, y: number) => void }
+type Props = { issues: Set<string>; layout: Layout; selected: string | null; select: (id: string | null) => void; move: (id: string, x: number, y: number) => void }
 
-export function Plan({ layout, selected, select, move }: Props) {
+export function Plan({ layout, selected, select, move, issues }: Props) {
   const { room, items } = layout
   const w = room.width
   const d = room.depth
@@ -21,12 +21,12 @@ export function Plan({ layout, selected, select, move }: Props) {
       <text className="dimension-label" x={w / 2} y="-29">{w} cm</text>
       <text className="dimension-label" transform={`translate(-30 ${d / 2}) rotate(-90)`}>{d} cm</text>
       <rect className="floor" width={w} height={d} onClick={() => select(null)} />
-      {items.map(item => <PlanItem key={item.id} item={item} selected={selected === item.id} select={select} move={move} />)}
+      {items.map(item => <PlanItem key={item.id} item={item} invalid={issues.has(item.id)} selected={selected === item.id} select={select} move={move} />)}
     </svg>
   )
 }
 
-function PlanItem({ item, selected, select, move }: { item: Furniture; selected: boolean; select: Props['select']; move: Props['move'] }) {
+function PlanItem({ item, selected, select, move, invalid }: { item: Furniture; invalid: boolean; selected: boolean; select: Props['select']; move: Props['move'] }) {
   const { x, y, width, depth } = footprint(item)
   const { name, color } = catalog[item.kind]
   const drag = useRef<{ pointer: number; offsetX: number; offsetY: number } | null>(null)
@@ -52,7 +52,7 @@ function PlanItem({ item, selected, select, move }: { item: Furniture; selected:
   }
 
   return (
-    <g className="plan-item" data-selected={selected} role="button" tabIndex={0}
+    <g className="plan-item" data-selected={selected} data-invalid={invalid} role="button" tabIndex={0}
       aria-label={name} aria-pressed={selected} onClick={() => select(item.id)}
       onPointerDown={start} onPointerMove={dragTo} onLostPointerCapture={event => {
         if (drag.current?.pointer === event.pointerId) drag.current = null
