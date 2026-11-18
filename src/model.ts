@@ -1,12 +1,13 @@
-export type Kind = 'bed' | 'desk' | 'closet' | 'nightstand'
+export type Kind = 'bed' | 'desk' | 'closet' | 'nightstand' | 'custom'
 export type Size = { width: number; depth: number; height: number }
-export type Furniture = Size & { id: string; kind: Kind; x: number; y: number; rotation: 0 | 90 | 180 | 270 }
+export type Furniture = Size & { id: string; kind: Kind; assetName?: string; x: number; y: number; rotation: 0 | 90 | 180 | 270 }
 export type Layout = { room: Size; items: Furniture[] }
 
 export const catalog = {
   bed: { name: 'Cama', width: 140, depth: 200, height: 55, color: '#adc7b6' },
   desk: { name: 'Escritorio', width: 120, depth: 60, height: 75, color: '#e5b986' },
   closet: { name: 'Clóset', width: 120, depth: 60, height: 205, color: '#d3c2ab' },
+  custom: { name: 'Modelo importado', width: 60, depth: 60, height: 60, color: '#b8ced6' },
   nightstand: { name: 'Velador', width: 45, depth: 40, height: 52, color: '#d8c7de' },
 } satisfies Record<Kind, Size & { name: string; color: string }>
 
@@ -24,4 +25,8 @@ export function example(): Layout {
       makeItem('closet', 'closet', 270, 24),
     ],
   }
+}
+
+export function furnitureName(item: Furniture) {
+  return item.assetName ?? catalog[item.kind].name
 }

@@ -2,20 +2,21 @@ import { templates } from './templates'
 import { readWorkspaces, saveWorkspaces } from './storage'
 import type { Slot } from './storage'
 import { inspectLayout } from './geometry'
-import { lazy, Suspense, useEffect, useState } from 'react'
+import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import { createRoot } from 'react-dom/client'
-import { catalog, makeItem } from './model'
+import { catalog, furnitureName, makeItem } from './model'
 import type { Furniture, Kind, Layout } from './model'
 import { Measure } from './Measure'
 import { Plan } from './Plan'
 import './style.css'
 
 const Scene = lazy(() => import('./Scene'))
-const kinds = Object.keys(catalog) as Kind[]
+const kinds = ['bed', 'desk', 'closet', 'nightstand'] as const
 const icons: Record<Kind, string> = {
   bed: 'M3 17V5m0 8h18v6M3 16h18M5 12V9h5v3m0-2h8a3 3 0 0 1 3 3',
   desk: 'M3 10h18v3H3zM5 13v7m14-7v7M9 10V5h6v5',
   closet: 'M5 3h14v17H5zM12 3v17m-2-9v2m4-2v2M6 20v1m12-1v1',
+  custom: 'M12 3l8 4.5v9L12 21l-8-4.5v-9L12 3zm0 9 8-4.5M12 12 4 7.5m8 4.5v9',
   nightstand: 'M5 6h14v13H5zM5 12h14m-8-3h2m-2 6h2m-7 4v2m12-2v2',
 }
 
@@ -29,6 +30,10 @@ function App() {
   const [templateIndex, setTemplateIndex] = useState(0)
   const [saved, setSaved] = useState(true)
   const layout = workspaces.layouts[workspaces.active]
+  const activeSlot = useRef(workspaces.active)
+  activeSlot.current = workspaces.active
+  const [importing, setImporting] = useState(false)
+  const [importMessage, setImportMessage] = useState('')
 
   useEffect(() => {
     setSaved(saveWorkspaces(workspaces))
@@ -85,6 +90,42 @@ function App() {
     select(id)
   }
 
+  async function importFile(file: File) {
+    const slot = workspaces.active
+    setImporting(true)
+    setImportMessage('Leyendo modelo…')
+    try {
+      const { maxModelSize, loadModel, disposeModel, saveModel } = await import('./modelFiles')
+      if (!file.name.toLowerCase().endsWith('.glb')) throw new Error('Selecciona un archivo .glb.')
+      if (file.size > maxModelSize) throw new Error('El archivo supera el límite de 10 MB.')
+      const model = await loadModel(file).catch(error => {
+        throw new Error(error instanceof Error && error.message.startsWith('El GLB')
+          ? error.message : 'No se pudo leer el GLB. Usa un archivo GLB 2.0 autocontenido.')
+      })
+      const { x, y, z } = model.size
+      disposeModel(model.scene)
+      const centimeters = (meters: number) => Math.max(1, Math.min(3000, Math.round(meters * 100)))
+      const id = crypto.randomUUID()
+      const assetName = file.name.slice(0, -4).trim().slice(0, 64) || 'Modelo importado'
+      await saveModel(id, file).catch(() => { throw new Error('El navegador no pudo guardar el modelo.') })
+      setWorkspaces(current => {
+        const layouts: [Layout, Layout] = [...current.layouts]
+        const target = layouts[slot]
+        const item = makeItem('custom', id, Math.round(target.room.width / 3), Math.round(target.room.depth / 3))
+        layouts[slot] = { ...target, items: [...target.items, {
+          ...item, assetName, width: centimeters(x), height: centimeters(y), depth: centimeters(z),
+        }] }
+        return { ...current, layouts }
+      })
+      if (activeSlot.current === slot) select(id)
+      setImportMessage(`Modelo agregado a la distribución ${slot === 0 ? 'A' : 'B'}.`)
+    } catch (error) {
+      setImportMessage(error instanceof Error ? error.message : 'No se pudo importar el modelo.')
+    } finally {
+      setImporting(false)
+    }
+  }
+
   function remove(id: string) {
     setLayout(current => ({ ...current, items: current.items.filter(item => item.id !== id) }))
     select(null)
@@ -112,6 +153,19 @@ function App() {
                 <span className="add" aria-hidden="true">+</span>
               </button>
             })}</div>
+          </section>
+          <section className="model-import">
+            <h2>Importar modelo</h2>
+            <label className="measure">Archivo 3D (.glb)
+              <input type="file" accept=".glb,model/gltf-binary" disabled={importing} aria-describedby="import-hint"
+                onChange={event => {
+                  const file = event.target.files?.[0]
+                  event.target.value = ''
+                  if (file) void importFile(file)
+                }} />
+            </label>
+            <small id="import-hint">GLB autocontenido de hasta 10 MB.</small>
+            <p className="muted" role="status">{importMessage}</p>
           </section>
           <section className="template-settings">
             <h2>Plantillas</h2>
@@ -146,7 +200,7 @@ function App() {
           <section>
             <h2>Medidas del mueble</h2>
             {active ? <div key={active.id}>
-              <div className="selected-item"><span className="catalog-icon" style={{ backgroundColor: catalog[active.kind].color }}><FurnitureIcon kind={active.kind} /></span><div><h3>{catalog[active.kind].name}</h3><small>{active.rotation}° de giro</small></div></div>
+              <div className="selected-item"><span className="catalog-icon" style={{ backgroundColor: catalog[active.kind].color }}><FurnitureIcon kind={active.kind} /></span><div><h3>{furnitureName(active)}</h3><small>{active.rotation}° de giro</small></div></div>
               <div className="measure-grid">
                 {([['width', 'Ancho'], ['depth', 'Largo'], ['height', 'Alto']] as const).map(([key, label]) =>
                   <Measure key={key} label={label} value={active[key]} change={value => edit(active.id, { [key]: value })} />)}
@@ -160,7 +214,7 @@ function App() {
               <div className="clearance" aria-live="polite">
                 {activeStatus?.clearance ? <p>Pared {activeStatus.clearance.wall} <strong>{activeStatus.clearance.distance} cm</strong></p> :
                   <p className="warning-text">Fuera de la habitación</p>}
-                {!!activeStatus?.collisions.length && <p className="warning-text">Se superpone con {activeStatus.collisions.map(item => catalog[item.kind].name.toLowerCase()).join(', ')}.</p>}
+                {!!activeStatus?.collisions.length && <p className="warning-text">Se superpone con {activeStatus.collisions.map(item => furnitureName(item).toLowerCase()).join(', ')}.</p>}
               </div>
               <div className="item-actions">
                 <button className="rotate" onClick={() => edit(active.id, { rotation: ((active.rotation + 90) % 360) as Furniture['rotation'] })}><span aria-hidden="true">↻</span> Girar 90°</button>
@@ -170,7 +224,7 @@ function App() {
           </section>
           {items.length > 0 && <section className="item-list"><h3>En esta pieza</h3>
             <ul>{items.map(item => <li key={item.id}><button aria-pressed={selected === item.id} onClick={() => select(item.id)}>
-              <span className="swatch" style={{ backgroundColor: catalog[item.kind].color }} />{catalog[item.kind].name}
+              <span className="swatch" style={{ backgroundColor: catalog[item.kind].color }} />{furnitureName(item)}
             </button></li>)}</ul>
           </section>}
         </aside>
